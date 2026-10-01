@@ -47,7 +47,7 @@ def client(tmp_path, monkeypatch):
 
 def test_session_announces_single_sign_on(client):
     _, c = client
-    assert c.get("/api/session").json()["oidc"] == {"name": "SSO"}
+    assert c.get("/api/session").json()["oidc"] == {"name": "SSO", "accounts": False}
 
 
 def test_forged_state_is_refused(client):
@@ -81,3 +81,27 @@ def test_kavita_key_of_someone_else_is_refused(client, monkeypatch):
     monkeypatch.setattr(main.svc.kavita.client, "post", other_owner)
     r = c.post("/api/me/kavita-key", json={"key": "k" * 32}, headers={"X-Lire": "1"})
     assert r.status_code == 403
+
+
+def test_new_friend_gets_kavita_and_sign_in_accounts(client, monkeypatch):
+    import asyncio
+    main, _ = client
+    made = {}
+
+    async def fake_kavita_user(username, password):
+        return "kavita-key"
+
+    async def fake_ensure(username, email):
+        made["email"] = email
+        return {"id": "pid-1", "username": username}
+
+    async def fake_link(user_id, ttl="168h"):
+        return f"https://id.example/lc/{user_id}"
+
+    monkeypatch.setattr(main.svc.kavita, "create_user", fake_kavita_user)
+    monkeypatch.setattr(main.svc.pocket, "enabled", True)
+    monkeypatch.setattr(main.svc.pocket, "ensure_user", fake_ensure)
+    monkeypatch.setattr(main.svc.pocket, "login_link", fake_link)
+    res = asyncio.run(main.create_user(main.NewUser(username="Lucas")))
+    assert res["sso_link"] == "https://id.example/lc/pid-1" and res["sso_note"] is None
+    assert made["email"] == "lucas@lire.invalid"

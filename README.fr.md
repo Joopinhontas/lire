@@ -148,7 +148,7 @@ Lire et Kavita peuvent partager une seule connexion via n'importe quel fournisse
 2. Renseigne `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` et `OIDC_NAME` dans `lire.env`.
 3. Active OpenID Connect dans Kavita (paramètres admin) avec le même fournisseur ; Kavita rattache les comptes existants par e-mail, donc donne à chacun la même adresse des deux côtés.
 
-Les comptes à mot de passe continuent de fonctionner. Une personne connue du fournisseur obtient un compte Lire à sa première connexion. Quand Kavita est servi sous le domaine de Lire, Lire relie la progression de lecture de chacun automatiquement à la première ouverture de Kavita.
+Les comptes à mot de passe continuent de fonctionner. Une personne connue du fournisseur obtient un compte Lire à sa première connexion. Avec Pocket ID et `POCKET_ID_API_KEY`, la page Comptes crée aussi le compte de connexion de chaque ami et te donne un lien d'enrôlement à usage unique à lui envoyer, et se connecter à Lire connecte à Kavita dans la même étape. Quand Kavita est servi sous le domaine de Lire, Lire relie la progression de lecture de chacun automatiquement à la première ouverture de Kavita.
 
 ### Sur iPad
 

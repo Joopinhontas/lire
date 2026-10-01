@@ -353,6 +353,11 @@ qbit = Qbit()
 READER_SEGMENT = {3: "book", 4: "pdf"}
 
 
+def kavita_email(username):
+    """Placeholder address shared by a reader's Kavita and sign-in accounts (Kavita links accounts by email)."""
+    return f"{username.lower()}@lire.invalid"
+
+
 class Kavita:
     def __init__(self):
         self.client = httpx.AsyncClient(base_url=f"{KAVITA_URL}/api", timeout=30, headers=UA)
@@ -498,7 +503,7 @@ class Kavita:
         return [lib["id"] for lib in (await self.request("GET", "/Library/libraries")).json()]
 
     async def create_user(self, username, password):
-        email = f"{username.lower()}@lire.invalid"
+        email = kavita_email(username)
         invite = await self.request("POST", "/Account/invite", json={
             "email": email, "roles": ["Login"], "libraries": await self.library_ids(),
             "ageRestriction": {"ageRating": -1, "includeUnknowns": True}})
@@ -526,6 +531,48 @@ class Kavita:
 
 
 kavita = Kavita()
+
+
+class PocketID:
+    """Optional Pocket ID admin API: Lire creates sign-in accounts and one-time enrolment links there."""
+
+    def __init__(self):
+        self.base = os.environ.get("OIDC_ISSUER", "").rstrip("/")
+        self.key = os.environ.get("POCKET_ID_API_KEY", "")
+        self.enabled = bool(self.base and self.key)
+
+    async def call(self, method, path, **kw):
+        r = await http.request(method, f"{self.base}/api{path}", headers={"X-API-KEY": self.key}, timeout=15, **kw)
+        r.raise_for_status()
+        return r
+
+    async def find(self, username):
+        r = await self.call("GET", "/users", params={"search": username, "pagination[limit]": 50})
+        return next((u for u in r.json().get("data", []) if u["username"].lower() == username.lower()), None)
+
+    async def ensure_user(self, username, email):
+        """The provider's user for this username, created if needed; the email is marked verified so Kavita can
+        link the account (Kavita matches people by verified email)."""
+        user = await self.find(username)
+        body = {"username": username, "email": email, "firstName": username.capitalize(), "lastName": ""}
+        if user is None:
+            user = (await self.call("POST", "/users", json={**body, "isAdmin": False})).json()
+        if not user.get("emailVerified"):
+            await self.call("PUT", f"/users/{user['id']}", json={
+                **body, "email": user.get("email") or email, "emailVerified": True, "isAdmin": user.get("isAdmin", False)})
+        return user
+
+    async def login_link(self, user_id, ttl="168h"):
+        token = (await self.call("POST", f"/users/{user_id}/one-time-access-token", json={"ttl": ttl})).json()["token"]
+        return f"{self.base}/lc/{token}"
+
+    async def remove(self, username):
+        user = await self.find(username)
+        if user:
+            await self.call("DELETE", f"/users/{user['id']}")
+
+
+pocket = PocketID()
 
 
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")

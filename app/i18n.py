@@ -27,6 +27,8 @@ MESSAGES = {
                    "en": "Kavita cannot see the folder {folder}: mount it in the Kavita container so the \"{library}\" library can be created."},
     "no_kavita_account": {"fr": "Ton compte n'est pas encore relié à Kavita : reconnecte-toi à Lire.",
                           "en": "Your account is not linked to Kavita yet: sign in to Lire again."},
+    "sso_user_failed": {"fr": "Le compte de connexion unique n'a pas pu être créé.",
+                        "en": "The single sign-on account could not be created."},
     "path_refused": {"fr": "Chemin refusé.", "en": "Path refused."},
     "bad_username": {"fr": "Identifiant : lettres minuscules, chiffres, point, tiret ou souligné (2 à 31 caractères).",
                      "en": "Username: lowercase letters, digits, dot, dash or underscore (2 to 31 characters)."},

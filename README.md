@@ -148,7 +148,7 @@ Lire and Kavita can share one login through any OpenID Connect provider (Pocket 
 2. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `OIDC_NAME` in `lire.env`.
 3. Enable OpenID Connect in Kavita (Admin settings), with the same provider; Kavita links existing accounts by email, so give each person the same email in both.
 
-Password accounts keep working. People known to the provider get a Lire account on their first sign-in. When Kavita is served under Lire's domain, Lire links each reader's progress automatically the first time they open Kavita.
+Password accounts keep working. People known to the provider get a Lire account on their first sign-in. With Pocket ID and `POCKET_ID_API_KEY`, the Accounts page also creates each friend's sign-in account and hands you a one-time enrolment link to send them, and signing in to Lire signs in to Kavita in the same step. When Kavita is served under Lire's domain, Lire links each reader's progress automatically the first time they open Kavita.
 
 ### On an iPad
 

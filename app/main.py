@@ -412,7 +412,7 @@ class Login(BaseModel):
 async def session(request: Request):
     user = session_user(session_cookie(request))
     return {"auth": bool(user), "user": {"username": user["username"], "role": user["role"]} if user else None,
-            "oidc": {"name": OIDC_NAME} if OIDC_ISSUER else None,
+            "oidc": {"name": OIDC_NAME, "accounts": svc.pocket.enabled} if OIDC_ISSUER else None,
             "kavita_linked": bool(user and user["kavita_key"])}
 
 
@@ -543,12 +543,26 @@ async def oidc_callback(request: Request, code: str = "", state: str = "", error
             row = con.execute("SELECT id, session_version FROM users WHERE username = ?", (username,)).fetchone()
             log.info("account %s created on first single sign-on", username)
     log.info("single sign-on for %s", username)
-    response = RedirectResponse("/", status_code=303)
+    response = RedirectResponse(await after_sign_in(), status_code=303)
     secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
     response.set_cookie(COOKIE_SECURE if secure else COOKIE_PLAIN, make_session(row[0], row[1]),
                         max_age=SESSION_DAYS * 86400, httponly=True, secure=secure, samesite="lax", path="/")
     response.delete_cookie(OIDC_COOKIE, path="/api/auth/oidc/")
     return response
+
+
+async def after_sign_in() -> str:
+    """Where to land after single sign-on. When Kavita shares Lire's domain and uses the same provider, go through
+    Kavita's own sign-in first (silent, the provider session is fresh) so the reader opens straight away later."""
+    try:
+        web = await svc.kavita_web_base()
+        if web.startswith("/"):
+            r = await svc.kavita.client.get("/settings/oidc", timeout=5)
+            if r.status_code == 200 and r.json().get("enabled"):
+                return f"{web}/oidc/login?{urlencode({'returnUrl': '/?signed=1'})}"
+    except (httpx.HTTPError, ValueError):
+        pass
+    return "/"
 
 
 class KavitaKey(BaseModel):
@@ -1384,6 +1398,18 @@ async def list_users():
     return {"users": [{"id": r[0], "username": r[1], "role": r[2], "created_at": r[3], "grabs": r[4]} for r in rows]}
 
 
+async def sso_link(username: str):
+    """Sign-in account at the identity provider and a one-time enrolment link (None when not configured)."""
+    if not svc.pocket.enabled:
+        return None, None
+    try:
+        user = await svc.pocket.ensure_user(username, svc.kavita_email(username))
+        return await svc.pocket.login_link(user["id"]), None
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        log.warning("sso account %s: %s", username, exc)
+        return None, tr("sso_user_failed")
+
+
 @app.post("/api/admin/users")
 async def create_user(body: NewUser):
     username = body.username.strip().lower()
@@ -1402,7 +1428,22 @@ async def create_user(body: NewUser):
     with db() as con:
         con.execute("INSERT INTO users (username, pw_hash, role, created_at, kavita_key) VALUES (?,?,?,?,?)",
                     (username, hash_password(password), "member", time.time(), kavita_key))
-    return {"username": username, "password": password, "kavita_note": kavita_note}
+    link, sso_note = await sso_link(username)
+    return {"username": username, "password": password, "kavita_note": kavita_note, "sso_link": link,
+            "sso_note": sso_note}
+
+
+@app.post("/api/admin/users/{uid}/sso-link")
+async def user_sso_link(uid: int):
+    user = get_user_by_id(uid)
+    if not user:
+        raise HTTPException(404, tr("no_such_user"))
+    if not svc.pocket.enabled:
+        raise HTTPException(404)
+    link, note = await sso_link(user["username"])
+    if not link:
+        raise HTTPException(502, note)
+    return {"username": user["username"], "sso_link": link}
 
 
 @app.post("/api/admin/users/{uid}/password")
@@ -1437,6 +1478,11 @@ async def delete_user(uid: int, request: Request):
         await svc.kavita.delete_user(user["username"])
     except httpx.HTTPStatusError:
         pass
+    if svc.pocket.enabled:
+        try:
+            await svc.pocket.remove(user["username"])
+        except httpx.HTTPError as exc:
+            log.warning("sso account removal %s: %s", user["username"], exc)
     with db() as con:
         con.execute("DELETE FROM users WHERE id = ?", (uid,))
     return {"ok": True}

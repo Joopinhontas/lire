@@ -1,4 +1,4 @@
-import { date, lang, num, setLang, t, tn, translateDom } from "./i18n.js?v=14";
+import { date, lang, num, setLang, t, tn, translateDom } from "./i18n.js?v=16";
 
 const main = document.getElementById("main");
 const topbar = document.getElementById("topbar");
@@ -1198,20 +1198,26 @@ async function renderAccounts(token) {
   const cred = main.querySelector("#new-cred");
 
   function showCredentials(res, title) {
+    const link = res.sso_link ? `<div><dt>${esc(t("acc.ssoLink"))}</dt><dd class="mono">${esc(res.sso_link)}</dd></div>` : "";
+    const password = res.password ? `<div><dt>${esc(t("acc.fallback"))}</dt><dd class="mono">${esc(res.password)}</dd></div>` : "";
     cred.innerHTML = `
       <div class="cred" role="status">
         <strong>${esc(title)}</strong>
-        <p>${esc(t("acc.shareOnce"))}</p>
+        <p>${esc(t(res.sso_link ? "acc.ssoShare" : "acc.shareOnce"))}</p>
         <dl>
           <div><dt>${esc(t("acc.address"))}</dt><dd>${esc(location.origin)}</dd></div>
           <div><dt>${esc(t("login.user"))}</dt><dd>${esc(res.username)}</dd></div>
-          <div><dt>${esc(t("login.password"))}</dt><dd class="mono">${esc(res.password)}</dd></div>
+          ${link}${password}
         </dl>
-        <p class="hint">${esc(res.kavita_note || t("acc.sameKavita"))}</p>
+        <p class="hint">${esc(res.sso_note || res.kavita_note || t(res.sso_link ? "acc.ssoHint" : "acc.sameKavita"))}</p>
         <button class="btn" type="button" id="copy-cred">${esc(t("acc.copy"))}</button>
       </div>`;
     cred.querySelector("#copy-cred").addEventListener("click", async () => {
-      const text = t("acc.message", { url: location.origin, user: res.username, password: res.password });
+      const lines = [t("acc.msgUrl", { url: location.origin })];
+      if (res.sso_link) lines.push(t("acc.msgLink", { link: res.sso_link, name: me.oidc?.name || "SSO" }));
+      lines.push(t("acc.msgUser", { user: res.username }));
+      if (res.password) lines.push(t("acc.msgPassword", { password: res.password }));
+      const text = lines.join("\n");
       try { await navigator.clipboard.writeText(text); toast(t("acc.copied")); } catch { toast(t("acc.copyFailed"), true); }
     });
   }
@@ -1225,8 +1231,8 @@ async function renderAccounts(token) {
           <div class="dl-name">${esc(u.username)}${u.role === "admin" ? ` <span class="tag good">${esc(t("acc.admin"))}</span>` : ""}</div>
           <div class="dl-status">${esc(tn(u.grabs, "n.started"))} · ${esc(t("acc.since", { date: date(u.created_at * 1000) }))}</div>
         </div>
-        <div class="user-actions">${u.role === "admin" ? "" : `
-          <button class="btn btn-small" type="button" data-reset="${u.id}" data-name="${esc(u.username)}">${esc(t("acc.reset"))}</button>
+        <div class="user-actions">${me.oidc?.accounts ? `<button class="btn btn-small" type="button" data-sso="${u.id}" data-name="${esc(u.username)}">${esc(t("acc.ssoButton"))}</button>` : ""}${u.role === "admin" ? "" : `
+          <button class="btn btn-small btn-quiet" type="button" data-reset="${u.id}" data-name="${esc(u.username)}">${esc(t("acc.reset"))}</button>
           <button class="btn btn-small btn-quiet" type="button" data-remove="${u.id}" data-name="${esc(u.username)}">${esc(t("common.delete"))}</button>`}
         </div>
       </div>`).join("")}</div>`;
@@ -1252,7 +1258,15 @@ async function renderAccounts(token) {
   list.addEventListener("click", async (event) => {
     const reset = event.target.closest("[data-reset]");
     const remove = event.target.closest("[data-remove]");
+    const sso = event.target.closest("[data-sso]");
     try {
+      if (sso) {
+        sso.disabled = true;
+        const res = await api(`/api/admin/users/${sso.dataset.sso}/sso-link`, { method: "POST" });
+        showCredentials(res, t("acc.ssoTitle", { name: sso.dataset.name }));
+        sso.disabled = false;
+        cred.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
       if (reset) {
         const name = reset.dataset.name;
         const ok = await confirmDialog({ title: t("acc.resetTitle", { name }), body: t("acc.resetBody"), confirm: t("acc.generate") });
@@ -1315,6 +1329,7 @@ document.getElementById("logout").addEventListener("click", async () => {
   } catch {
     return renderLogin();
   }
+  if (new URLSearchParams(location.search).has("signed")) history.replaceState(null, "", location.pathname + location.hash);
   await linkKavitaFromSession();
   route();
   refreshBadge();

@@ -2,6 +2,12 @@
 
 All notable changes to Lire. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [2.2.0] - 2026-10-01
+
+### Added
+- Accounts page creates the friend's Pocket ID account too (same email as Kavita, marked verified) and shows a one-time enrolment link to send; a "Sign-in link" button issues a new one for any account; deleting an account removes it at the provider.
+- One sign-in for everything: after single sign-on Lire goes through Kavita's own sign-in (silent with a fresh provider session) and comes back, so the reader opens straight to the right volume.
+
 ## [2.1.0] - 2026-10-01
 
 ### Added
@@ -30,5 +36,6 @@ First public release.
 ### Operations
 - Installable PWA designed for tablets; hardened container (read-only, no capabilities, unprivileged); multi-arch image on GHCR, started and checked in CI before every release.
 
+[2.2.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.2.0
 [2.1.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.0.0
