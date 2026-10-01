@@ -1,4 +1,4 @@
-import { date, lang, num, setLang, t, tn, translateDom } from "./i18n.js?v=13";
+import { date, lang, num, setLang, t, tn, translateDom } from "./i18n.js?v=14";
 
 const main = document.getElementById("main");
 const topbar = document.getElementById("topbar");
@@ -15,6 +15,7 @@ const ICON = {
   open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/></svg>',
   refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>',
 };
 
@@ -117,12 +118,14 @@ function storageSet(store, key, value) {
   try { store.setItem(key, value); } catch { /* private mode: nothing to remember */ }
 }
 
-const me = { username: "", role: "" };
+const me = { username: "", role: "", oidc: null, kavitaLinked: true };
 
 async function loadSession() {
   const s = await api("/api/session");
   me.username = s.user?.username || "";
   me.role = s.user?.role || "";
+  me.oidc = s.oidc || null;
+  me.kavitaLinked = Boolean(s.kavita_linked);
   document.getElementById("nav-accounts").hidden = me.role !== "admin";
   document.getElementById("me-name").textContent = me.username;
   return s.auth;
@@ -209,6 +212,31 @@ function syncLangButton() {
 
 /* ---------- Login ---------- */
 
+/** Error code sent back by the single sign-on callback (?login_error=...), shown once then dropped from the URL. */
+function ssoError() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get("login_error");
+  if (!code) return "";
+  history.replaceState(null, "", location.pathname + location.hash);
+  const key = `login.error.${code}`;
+  const text = t(key);
+  return text === key ? t("login.error.sso_down") : text;
+}
+
+/** Same domain as Kavita: when its session is open in this browser, hand the reader's own key to Lire once. */
+async function linkKavitaFromSession() {
+  if (me.kavitaLinked) return;
+  try {
+    const r = await fetch("/kavita/api/Account/auth-keys", { credentials: "same-origin" });
+    if (!r.ok) return;
+    const keys = await r.json();
+    const key = (keys.find((k) => k.name === "opds") || keys[0])?.key;
+    if (!key) return;
+    await api("/api/me/kavita-key", { method: "POST", body: { key } });
+    me.kavitaLinked = true;
+  } catch { /* no Kavita session yet: the library offers to open Kavita once */ }
+}
+
 function renderLogin() {
   stopPolling();
   renderToken++;
@@ -219,6 +247,9 @@ function renderLogin() {
         <div class="login-mark" aria-hidden="true">Lire<span>.</span></div>
         <h1 class="visually-hidden">${esc(t("login.title"))}</h1>
         <p>${esc(t("app.tagline"))}</p>
+        ${me.oidc ? `<a class="btn btn-primary btn-sso" href="/api/auth/oidc/start">${ICON.key} ${esc(t("login.sso", { name: me.oidc.name }))}</a>
+          <p class="login-or"><span>${esc(t("login.or"))}</span></p>` : ""}
+        <p class="form-error" id="sso-error" aria-live="assertive">${esc(ssoError())}</p>
         <div class="field">
           <label for="user">${esc(t("login.user"))}</label>
           <input class="input" id="user" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required value="${esc(storageGet(localStorage, "lire:user"))}">
@@ -228,7 +259,7 @@ function renderLogin() {
           <input class="input" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
         </div>
         <p class="form-error" id="pw-error" aria-live="assertive"></p>
-        <button class="btn btn-primary" type="submit">${esc(t("login.submit"))}</button>
+        <button class="btn ${me.oidc ? "" : "btn-primary"}" type="submit">${esc(t("login.submit"))}</button>
         <div class="login-lang">${langButton("login-lang")}</div>
       </form>
     </div>`;
@@ -1079,7 +1110,13 @@ async function renderLibrary(token, { manage = false, kind = "manga" } = {}) {
   const tabs = `<div class="editions lib-tabs" role="tablist" aria-label="${esc(t("lib.title"))}">
     <a role="tab" href="#/" aria-selected="${kind === "manga"}">${esc(t("home.mangas"))}</a>
     <a role="tab" href="#/bibliotheque?type=bd" aria-selected="${kind === "comics"}">${esc(t("home.comics"))}</a></div>`;
-  setView(`<div class="page"><section class="section continue" id="lib-continue" aria-labelledby="h-continue" hidden></section><div class="search-hero lib-head"><div><h1>${esc(t("lib.title"))}</h1>${tabs}<p class="hint" id="lib-hint"></p></div><div id="lib-tools"></div></div><p class="notice" id="lib-importing" hidden></p><div id="lib" class="section">${loadingLine()}</div></div>`, { nav: "library" });
+  setView(`<div class="page"><section class="section continue" id="lib-continue" aria-labelledby="h-continue" hidden></section><div class="search-hero lib-head"><div><h1>${esc(t("lib.title"))}</h1>${tabs}<p class="hint" id="lib-hint"></p></div><div id="lib-tools"></div></div><p class="notice notice-quiet" id="lib-link" hidden></p><p class="notice" id="lib-importing" hidden></p><div id="lib" class="section">${loadingLine()}</div></div>`, { nav: "library" });
+  linkKavitaFromSession().then(() => {
+    const note = main.querySelector("#lib-link");
+    if (!note || me.kavitaLinked || token !== renderToken) return;
+    note.innerHTML = `${esc(t("lib.linkKavita"))} <a href="/kavita/">${esc(t("lib.openKavita"))}</a>`;
+    note.hidden = false;
+  });
   const box = main.querySelector("#lib");
   const tools = main.querySelector("#lib-tools");
   const hint = main.querySelector("#lib-hint");
@@ -1278,6 +1315,7 @@ document.getElementById("logout").addEventListener("click", async () => {
   } catch {
     return renderLogin();
   }
+  await linkKavitaFromSession();
   route();
   refreshBadge();
   setInterval(() => { if (!document.hidden) refreshBadge(); }, 30000);

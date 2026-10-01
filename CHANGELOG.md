@@ -2,6 +2,12 @@
 
 All notable changes to Lire. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [2.1.0] - 2026-10-01
+
+### Added
+- Single sign-on with any OpenID Connect provider (authorization code with PKCE): a "Sign in with …" button above the password form, accounts created on first sign-in, password accounts kept.
+- Reading progress linked automatically for single sign-on users: when Kavita shares Lire's domain, the page hands Lire the reader's own Kavita key once, and Lire checks that the key belongs to that reader.
+
 ## [2.0.0] - 2026-10-01
 
 First public release.
@@ -24,4 +30,5 @@ First public release.
 ### Operations
 - Installable PWA designed for tablets; hardened container (read-only, no capabilities, unprivileged); multi-arch image on GHCR, started and checked in CI before every release.
 
+[2.1.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.0.0

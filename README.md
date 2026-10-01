@@ -140,6 +140,16 @@ location /kavita/ {
 }
 ```
 
+### Single sign-on
+
+Lire and Kavita can share one login through any OpenID Connect provider (Pocket ID with passkeys works well for a home server):
+
+1. In the provider, create two clients: Lire, with the callback `<PUBLIC_URL>/api/auth/oidc/callback`, and Kavita, with `<Kavita URL>/signin-oidc`.
+2. Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and `OIDC_NAME` in `lire.env`.
+3. Enable OpenID Connect in Kavita (Admin settings), with the same provider; Kavita links existing accounts by email, so give each person the same email in both.
+
+Password accounts keep working. People known to the provider get a Lire account on their first sign-in. When Kavita is served under Lire's domain, Lire links each reader's progress automatically the first time they open Kavita.
+
 ### On an iPad
 
 Open Lire in Safari, tap Share, then **Add to Home Screen**. It runs full screen like an app, and Kavita opens inside it when the location above is set.

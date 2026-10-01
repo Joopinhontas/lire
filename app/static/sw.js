@@ -1,9 +1,9 @@
-const VERSION = "lire-13";
+const VERSION = "lire-14";
 const SHELL = [
   "/",
-  "/static/app.css?v=13",
-  "/static/app.js?v=13",
-  "/static/i18n.js?v=13",
+  "/static/app.css?v=14",
+  "/static/app.js?v=14",
+  "/static/i18n.js?v=14",
   "/static/fonts/archivo-latin-standard-normal.woff2",
   "/static/fonts/archivo-latin-ext-standard-normal.woff2",
   "/static/icon-180.png",

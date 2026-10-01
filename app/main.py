@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import hashlib
 import hmac
 import io
@@ -14,12 +15,12 @@ import time
 from collections import Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from PIL import Image
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -374,7 +375,7 @@ async def guard(request: Request, call_next):
     path = request.url.path
     request.state.user = None
     i18n.lang.set(i18n.pick(request.headers.get("x-lire-lang") or request.headers.get("accept-language")))
-    if path.startswith("/api/") and path not in ("/api/login", "/api/session"):
+    if path.startswith("/api/") and path not in ("/api/login", "/api/session") and not path.startswith("/api/auth/oidc/"):
         user = session_user(session_cookie(request))
         if not user:
             return JSONResponse({"detail": "auth"}, status_code=401)
@@ -410,7 +411,9 @@ class Login(BaseModel):
 @app.get("/api/session")
 async def session(request: Request):
     user = session_user(session_cookie(request))
-    return {"auth": bool(user), "user": {"username": user["username"], "role": user["role"]} if user else None}
+    return {"auth": bool(user), "user": {"username": user["username"], "role": user["role"]} if user else None,
+            "oidc": {"name": OIDC_NAME} if OIDC_ISSUER else None,
+            "kavita_linked": bool(user and user["kavita_key"])}
 
 
 @app.post("/api/login")
@@ -451,6 +454,123 @@ async def link_kavita(uid: int, username: str, password: str):
         with db() as con:
             con.execute("UPDATE users SET kavita_key = ? WHERE id = ?", (key, uid))
         log.info("kavita key linked for %s", username)
+
+
+# ---------- Single sign-on (OpenID Connect, authorization code + PKCE) ----------
+
+OIDC_ISSUER = os.environ.get("OIDC_ISSUER", "").rstrip("/")
+OIDC_CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
+OIDC_CLIENT_SECRET = os.environ.get("OIDC_CLIENT_SECRET", "")
+OIDC_NAME = os.environ.get("OIDC_NAME", "SSO")
+OIDC_COOKIE = "lire_oidc"
+_oidc_meta: dict = {}
+
+
+async def oidc_meta():
+    if not _oidc_meta:
+        r = await svc.http.get(f"{OIDC_ISSUER}/.well-known/openid-configuration", timeout=10)
+        r.raise_for_status()
+        _oidc_meta.update(r.json())
+    return _oidc_meta
+
+
+def oidc_redirect_uri(request: Request) -> str:
+    base = svc.PUBLIC_URL or str(request.base_url).rstrip("/")
+    return f"{base}/api/auth/oidc/callback"
+
+
+def b64url(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def login_error(code: str):
+    return RedirectResponse(f"/?{urlencode({'login_error': code})}", status_code=303)
+
+
+@app.get("/api/auth/oidc/start")
+async def oidc_start(request: Request):
+    if not OIDC_ISSUER:
+        raise HTTPException(404)
+    try:
+        meta = await oidc_meta()
+    except httpx.HTTPError:
+        return login_error("sso_down")
+    state, nonce, verifier = secrets.token_urlsafe(24), secrets.token_urlsafe(24), secrets.token_urlsafe(48)
+    challenge = b64url(hashlib.sha256(verifier.encode()).digest())
+    params = {"response_type": "code", "client_id": OIDC_CLIENT_ID, "redirect_uri": oidc_redirect_uri(request),
+              "scope": "openid profile email", "state": state, "nonce": nonce,
+              "code_challenge": challenge, "code_challenge_method": "S256"}
+    payload = f"{state}.{verifier}.{int(time.time()) + 600}"
+    response = RedirectResponse(f"{meta['authorization_endpoint']}?{urlencode(params)}", status_code=303)
+    secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    response.set_cookie(OIDC_COOKIE, f"{payload}.{sign(payload)}", max_age=600, httponly=True, secure=secure,
+                        samesite="lax", path="/api/auth/oidc/")
+    return response
+
+
+@app.get("/api/auth/oidc/callback")
+async def oidc_callback(request: Request, code: str = "", state: str = "", error: str = ""):
+    raw = request.cookies.get(OIDC_COOKIE) or ""
+    parts = raw.split(".")
+    if error or not code or len(parts) != 4:
+        return login_error("sso_cancelled" if error else "sso_expired")
+    cookie_state, verifier, exp, sig = parts
+    if (not hmac.compare_digest(sig, sign(f"{cookie_state}.{verifier}.{exp}"))
+            or not hmac.compare_digest(cookie_state, state) or int(exp) < time.time()):
+        return login_error("sso_expired")
+    try:
+        meta = await oidc_meta()
+        token = await svc.http.post(meta["token_endpoint"], auth=(OIDC_CLIENT_ID, OIDC_CLIENT_SECRET), timeout=15, data={
+            "grant_type": "authorization_code", "code": code, "redirect_uri": oidc_redirect_uri(request),
+            "code_verifier": verifier})
+        token.raise_for_status()
+        # Claims come from the userinfo endpoint over TLS with the fresh access token (OIDC Core 3.1.3.7).
+        info = await svc.http.get(meta["userinfo_endpoint"], timeout=15,
+                                  headers={"Authorization": f"Bearer {token.json()['access_token']}"})
+        info.raise_for_status()
+        claims = info.json()
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        log.warning("oidc callback: %s", exc)
+        return login_error("sso_down")
+    username = (claims.get("preferred_username") or "").strip().lower()
+    if not USERNAME_RE.match(username):
+        return login_error("sso_user")
+    with db() as con:
+        row = con.execute("SELECT id, session_version FROM users WHERE username = ?", (username,)).fetchone()
+        if not row:  # people the identity provider knows get a Lire account on first sign-in
+            con.execute("INSERT INTO users (username, pw_hash, role, created_at) VALUES (?,?,?,?)",
+                        (username, hash_password(secrets.token_urlsafe(32)), "member", time.time()))
+            row = con.execute("SELECT id, session_version FROM users WHERE username = ?", (username,)).fetchone()
+            log.info("account %s created on first single sign-on", username)
+    log.info("single sign-on for %s", username)
+    response = RedirectResponse("/", status_code=303)
+    secure = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+    response.set_cookie(COOKIE_SECURE if secure else COOKIE_PLAIN, make_session(row[0], row[1]),
+                        max_age=SESSION_DAYS * 86400, httponly=True, secure=secure, samesite="lax", path="/")
+    response.delete_cookie(OIDC_COOKIE, path="/api/auth/oidc/")
+    return response
+
+
+class KavitaKey(BaseModel):
+    key: str = Field(min_length=8, max_length=128)
+
+
+@app.post("/api/me/kavita-key")
+async def link_kavita_key(body: KavitaKey, request: Request):
+    """Store the reader's own Kavita key (read by the page from the Kavita session it shares the domain with)."""
+    user = request.state.user
+    try:
+        r = await svc.kavita.client.post("/Plugin/authenticate", params={"apiKey": body.key, "pluginName": "lire"})
+        r.raise_for_status()
+        owner = (r.json().get("username") or "").lower()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(400) from exc
+    if owner != user["username"].lower():
+        raise HTTPException(403)
+    with db() as con:
+        con.execute("UPDATE users SET kavita_key = ? WHERE id = ?", (body.key, user["id"]))
+    log.info("kavita key linked for %s from the shared kavita session", user["username"])
+    return {"ok": True}
 
 
 @app.post("/api/logout")

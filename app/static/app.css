@@ -533,3 +533,12 @@ main:focus { outline: none; }
 .vol-range { display: grid; gap: 6px; }
 .vol-range input { width: 100%; min-height: 44px; accent-color: var(--signal); }
 .vol-range output { color: var(--ink-2); font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+
+/* Single sign-on */
+.btn-sso { width: 100%; text-decoration: none; }
+.btn-sso svg { width: 18px; height: 18px; }
+.login-or { display: flex; align-items: center; gap: 14px; color: var(--ink-3); font-size: var(--fs-s); margin: 0; }
+.login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+#sso-error:empty { display: none; }
+.notice-quiet { background: var(--surface); }
+.notice-quiet a { color: var(--ink); text-underline-offset: 3px; }

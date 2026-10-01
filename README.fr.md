@@ -140,6 +140,16 @@ location /kavita/ {
 }
 ```
 
+### Connexion unique (SSO)
+
+Lire et Kavita peuvent partager une seule connexion via n'importe quel fournisseur OpenID Connect (Pocket ID avec passkeys convient très bien à un serveur maison) :
+
+1. Dans le fournisseur, crée deux clients : Lire, avec l'URL de retour `<PUBLIC_URL>/api/auth/oidc/callback`, et Kavita, avec `<URL de Kavita>/signin-oidc`.
+2. Renseigne `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` et `OIDC_NAME` dans `lire.env`.
+3. Active OpenID Connect dans Kavita (paramètres admin) avec le même fournisseur ; Kavita rattache les comptes existants par e-mail, donc donne à chacun la même adresse des deux côtés.
+
+Les comptes à mot de passe continuent de fonctionner. Une personne connue du fournisseur obtient un compte Lire à sa première connexion. Quand Kavita est servi sous le domaine de Lire, Lire relie la progression de lecture de chacun automatiquement à la première ouverture de Kavita.
+
 ### Sur iPad
 
 Ouvre Lire dans Safari, touche Partager puis **Sur l'écran d'accueil**. L'app tourne en plein écran, et Kavita s'ouvre dedans quand la location ci-dessus est en place.
