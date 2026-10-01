@@ -91,7 +91,7 @@ def test_forwarded_ip_only_trusted_from_proxy(app_module):
             self.client = type("C", (), {"host": peer})()
             self.headers = {"x-real-ip": real}
     assert app_module.client_ip(Req("172.18.0.1", "90.1.2.3")) == "90.1.2.3"
-    assert app_module.client_ip(Req("192.168.1.50", "1.1.1.1")) == "192.168.1.50"
+    assert app_module.client_ip(Req("203.0.113.50", "1.1.1.1")) == "203.0.113.50"
 
 
 def test_throttle_window(app_module):
