@@ -358,6 +358,31 @@ def kavita_email(username):
     return f"{username.lower()}@lire.invalid"
 
 
+def volume_number(volume):
+    number = volume.get("minNumber") or 0
+    return number if 0 < number < 100000 else None
+
+
+def resume_point(volumes):
+    """Where to pick up: the chapter read most recently, or the next one when it is finished.
+
+    Kavita's own continue point is the first unfinished chapter in order, so someone who started at volume 2
+    would be sent back to page 0 of volume 1."""
+    ordered = []
+    for volume in sorted(volumes, key=lambda v: (v.get("minNumber") or 0) if 0 < (v.get("minNumber") or 0) < 100000 else 10**6):
+        for chapter in sorted(volume.get("chapters") or [], key=lambda c: c.get("minNumber") or 0):
+            ordered.append((volume, chapter))
+    touched = [i for i, (_, c) in enumerate(ordered) if (c.get("pagesRead") or 0) > 0]
+    if not touched:
+        return None
+    last = max(touched, key=lambda i: ordered[i][1].get("lastReadingProgressUtc") or "")
+    volume, chapter = ordered[last]
+    if (chapter.get("pagesRead") or 0) >= (chapter.get("pages") or 0) and last + 1 < len(ordered):
+        volume, chapter = ordered[last + 1]
+    return {"volume": volume_number(volume), "page": chapter.get("pagesRead") or 0,
+            "pages": chapter.get("pages") or 0, "chapter": chapter["id"]}
+
+
 class Kavita:
     def __init__(self):
         self.client = httpx.AsyncClient(base_url=f"{KAVITA_URL}/api", timeout=30, headers=UA)
@@ -400,15 +425,15 @@ class Kavita:
     async def reading_state(self, series, library_id, api_key=None):
         """Where this reader stands in a series, and the URL path that reopens the reader right there."""
         sid = series["id"]
-        point = (await self.request("GET", "/Reader/continue-point", api_key, params={"seriesId": sid})).json()
-        volume = (await self.request("GET", "/Series/volume", api_key, params={"volumeId": point["volumeId"]})).json()
         segment = READER_SEGMENT.get(series.get("format"), "manga")
-        return {
-            "volume": volume.get("minNumber") if 0 < (volume.get("minNumber") or 0) < 100000 else None,
-            "page": point.get("pagesRead") or 0,
-            "pages": point.get("pages") or 0,
-            "path": f"/library/{library_id}/series/{sid}/{segment}/{point['id']}",
-        }
+        found = resume_point(await self.volumes(sid, api_key))
+        if found is None:  # nothing read yet: Kavita's own continue point is the first volume
+            point = (await self.request("GET", "/Reader/continue-point", api_key, params={"seriesId": sid})).json()
+            volume = (await self.request("GET", "/Series/volume", api_key, params={"volumeId": point["volumeId"]})).json()
+            found = {"volume": volume_number(volume), "page": point.get("pagesRead") or 0,
+                     "pages": point.get("pages") or 0, "chapter": point["id"]}
+        return {"volume": found["volume"], "page": found["page"], "pages": found["pages"],
+                "path": f"/library/{library_id}/series/{sid}/{segment}/{found['chapter']}"}
 
     async def login_key(self, username, password):
         r = await self.client.post("/Account/login", json={"username": username, "password": password, "apiKey": ""})

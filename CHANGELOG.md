@@ -2,6 +2,11 @@
 
 All notable changes to Lire. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
 
+## [2.2.1] - 2026-10-01
+
+### Fixed
+- "Continue reading" reopened volume 1 at page 0 for readers who started a series at a later volume: Lire now resumes the chapter read most recently (or the next one when it is finished) instead of Kavita's first unfinished chapter.
+
 ## [2.2.0] - 2026-10-01
 
 ### Added
@@ -36,6 +41,7 @@ First public release.
 ### Operations
 - Installable PWA designed for tablets; hardened container (read-only, no capabilities, unprivileged); multi-arch image on GHCR, started and checked in CI before every release.
 
+[2.2.1]: https://github.com/Joopinhontas/lire/releases/tag/v2.2.1
 [2.2.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.2.0
 [2.1.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Joopinhontas/lire/releases/tag/v2.0.0
