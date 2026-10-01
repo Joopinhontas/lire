@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest an idea for Lire.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Lire makes hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+  - type: textarea
+    id: setup
+    attributes:
+      label: Your setup
+      description: Indexers, languages, readers (Kavita, Komga…) you use.

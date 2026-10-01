@@ -1,0 +1,19 @@
+# Secrets and local deployment
+lire.env
+.env
+docker-compose.override.yml
+/data/
+/library/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Editors and tooling
+.impeccable/
+.idea/
+.vscode/
+.DS_Store

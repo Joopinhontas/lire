@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Search for ...\n2. Tap ...\n3. See ..."
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`docker logs lire --since 10m`. Remove anything private before pasting."
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Lire version or image tag
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: stack
+    attributes:
+      label: Kavita, Prowlarr and qBittorrent versions

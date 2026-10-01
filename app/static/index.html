@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#131313">
+  <meta name="description" content="Find a manga, fetch every French volume, read it in Kavita.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lire">
+  <title>Lire</title>
+  <link rel="preconnect" href="https://s4.anilist.co" crossorigin>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="preload" href="/static/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/app.css?v=13">
+  <link rel="modulepreload" href="/static/i18n.js?v=13">
+  <script type="module" src="/static/app.js?v=13"></script>
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="app.skip">Aller au contenu</a>
+  <header class="topbar" id="topbar" hidden>
+    <a class="wordmark" href="#/" data-i18n-aria="app.home" aria-label="Lire, accueil">lire<span class="wordmark-dot" aria-hidden="true"></span></a>
+    <nav class="nav" data-i18n-aria="nav.sections" aria-label="Sections">
+      <a href="#/" data-nav="library"><span data-i18n="nav.library">Bibliothèque</span></a>
+      <a href="#/chercher" data-nav="home"><span data-i18n="nav.search">Chercher</span></a>
+      <a href="#/telechargements" data-nav="downloads"><span data-i18n="nav.downloads">Téléchargements</span><span class="badge" id="dl-badge" hidden></span></a>
+      <a href="#/comptes" data-nav="accounts" id="nav-accounts" hidden><span data-i18n="nav.accounts">Comptes</span></a>
+    </nav>
+    <div class="me">
+      <span class="me-name" id="me-name"></span>
+      <button class="btn btn-quiet btn-small lang-switch" type="button" id="lang">EN</button>
+      <button class="btn btn-quiet btn-small" type="button" id="logout" data-i18n="nav.logout">Quitter</button>
+    </div>
+  </header>
+  <main id="main" tabindex="-1"></main>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Lire needs JavaScript. Lire a besoin de JavaScript.</p></noscript>
+</body>
+</html>

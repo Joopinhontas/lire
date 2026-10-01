@@ -1,0 +1,36 @@
+# Lire: copy lire.env.example to lire.env, set MANGA_DIR / COMICS_DIR in .env, then:
+#   docker compose up -d            (prebuilt image, amd64 and arm64)
+#   docker compose up -d --build    (build from this checkout instead)
+services:
+  lire:
+    image: ghcr.io/joopinhontas/lire:${LIRE_VERSION:-latest}
+    build: .
+    container_name: lire
+    restart: unless-stopped
+    mem_limit: 256m
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file: lire.env
+    environment:
+      - TZ=${TZ:-Europe/Paris}
+    volumes:
+      - ./data:/state
+      # Same folders qBittorrent writes to and Kavita reads from, seen from the host.
+      - ${MANGA_DIR:-./library/manga}:/library/manga
+      - ${COMICS_DIR:-./library/comics}:/library/comics
+      # Other languages: sibling folders, one Kavita library per language (see README).
+      - ${MANGA_DIR:-./library/manga}-lang:/library/manga-lang
+      - ${COMICS_DIR:-./library/comics}-lang:/library/comics-lang
+    ports:
+      - "${LIRE_BIND:-127.0.0.1:8160}:8160"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

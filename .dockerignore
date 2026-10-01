@@ -1,0 +1,5 @@
+*
+!app/
+!requirements.txt
+app/**/__pycache__
+app/**/.impeccable

@@ -1,0 +1,33 @@
+name: Release title misread
+description: Lire rejected a good release, matched the wrong series, or got the volumes wrong.
+title: "parse: "
+labels: ["parser"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Exact release title
+      description: Copy it from the "Other releases" list, character for character.
+      placeholder: "Berserk (01-41+) (Miura) [Digital]"
+    validations:
+      required: true
+  - type: input
+    id: series
+    attributes:
+      label: Series you searched for
+      placeholder: "Berserk"
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What Lire did
+      description: Volumes it found, or the reason it gave for leaving the release out.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should have done
+    validations:
+      required: true

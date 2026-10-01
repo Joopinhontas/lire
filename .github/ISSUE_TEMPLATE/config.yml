@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and setup help
+    url: https://github.com/Joopinhontas/lire/discussions/categories/q-a
+    about: Ask how to install, configure or use Lire.
+  - name: Security vulnerability
+    url: https://github.com/Joopinhontas/lire/security/advisories/new
+    about: Report it privately, please.
