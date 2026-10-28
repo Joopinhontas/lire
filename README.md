@@ -189,3 +189,21 @@ Lire is a library manager. It hosts no content, ships with no indexer and points
 [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, study, modify and share for any noncommercial purpose: personal use, hobby projects, research, education, charities, public institutions. Selling it, hosting it as a paid service or using it inside a commercial product requires a separate license: open an issue to ask.
 
 This is a source-available license, not an OSI-approved open source one. That is deliberate: the project stays a gift to readers rather than raw material for someone else's paid service.
+
+## NAS installation notes
+
+### Unraid
+
+Install Lire through Community Applications using the Lire template. Configure the host paths for the manga and comics libraries to point to the same folders used by qBittorrent and Kavita. Set the required environment variables, service URLs, API keys, and admin credentials before starting the container.
+
+### TrueNAS SCALE
+
+Deploy `ghcr.io/joopinhontas/lire:latest` as a custom application or container. Configure persistent storage for `/state` and mount the manga and comics folders at `/library/manga` and `/library/comics`. Set the environment variables documented in `lire.env.example`. Ensure qBittorrent and Kavita use the same host datasets, even if their container paths differ.
+
+### Synology Container Manager
+
+Create a project or container using `ghcr.io/joopinhontas/lire:latest`. Configure persistent storage for `/state`, map the manga and comics folders to `/library/manga` and `/library/comics`, and set the required environment variables from `lire.env.example`. Ensure qBittorrent and Kavita use the same host folders, even if their container paths differ.
+
+### Shared library paths
+
+The host folders used by qBittorrent, Lire, and Kavita must refer to the same manga and comics files. Configure `MANGA_SAVE_ROOT`, `COMICS_SAVE_ROOT`, `KAVITA_MANGA_ROOT`, and `KAVITA_COMICS_ROOT` to match the paths visible inside the relevant containers. Check the existing environment variable documentation before deploying.

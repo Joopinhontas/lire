@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Lire</Name>
+  <Repository>ghcr.io/joopinhontas/lire:latest</Repository>
+  <Registry>https://ghcr.io</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Joopinhontas/lire/issues</Support>
+  <Project>https://github.com/Joopinhontas/lire</Project>
+  <Overview>Self-hosted manga and comics manager that connects Prowlarr, qBittorrent and Kavita.</Overview>
+  <Category>MediaApp:Books</Category>
+  <WebUI>http://[IP]:[PORT:8160]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Joopinhontas/lire/main/templates/lire.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Joopinhontas/lire/main/docs/social-preview.png</Icon>
+  <ExtraParams>--read-only --pids-limit=128 --cap-drop=ALL --security-opt=no-new-privileges:true --tmpfs /tmp:size=32m,mode=1777 --memory=256m</ExtraParams>
+  <PostArgs/>
+  <Requires>Configure the required credentials and service URLs before starting Lire.</Requires>
+
+  <Config Name="Web UI Port" Target="8160" Default="8160" Mode="tcp" Description="Lire web interface port" Type="Port" Display="always" Required="true" Mask="false">8160</Config>
+
+  <Config Name="Application Data" Target="/state" Default="/mnt/user/appdata/lire" Mode="rw" Description="Persistent application state" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/lire</Config>
+
+  <Config Name="Manga Library" Target="/library/manga" Default="/mnt/user/media/manga" Mode="rw" Description="Same host folder used by qBittorrent and Kavita" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/manga</Config>
+
+  <Config Name="Comics Library" Target="/library/comics" Default="/mnt/user/media/comics" Mode="rw" Description="Same host folder used by qBittorrent and Kavita" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/comics</Config>
+
+  <Config Name="Manga Other Languages" Target="/library/manga-lang" Default="/mnt/user/media/manga-lang" Mode="rw" Description="Sibling folder for releases in other languages" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/manga-lang</Config>
+
+  <Config Name="Comics Other Languages" Target="/library/comics-lang" Default="/mnt/user/media/comics-lang" Mode="rw" Description="Sibling folder for releases in other languages" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/comics-lang</Config>
+
+  <Config Name="Lire Admin Password" Target="LIRE_PASSWORD" Default="" Mode="" Description="Required initial administrator password" Type="Variable" Display="always" Required="true" Mask="true"/>
+
+  <Config Name="Session Secret" Target="SESSION_SECRET" Default="" Mode="" Description="Required secret used to sign session cookies; generate a random value" Type="Variable" Display="always" Required="true" Mask="true"/>
+
+  <Config Name="Admin Username" Target="LIRE_ADMIN" Default="admin" Mode="" Description="Initial administrator username" Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
+
+  <Config Name="Timezone" Target="TZ" Default="Europe/Paris" Mode="" Description="Container timezone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Paris</Config>
+
+  <Config Name="Prowlarr URL" Target="PROWLARR_URL" Default="" Mode="" Description="Reachable Prowlarr URL, for example http://UNRAID-IP:9696" Type="Variable" Display="always" Required="true" Mask="false"/>
+
+  <Config Name="Prowlarr API Key" Target="PROWLARR_API_KEY" Default="" Mode="" Description="API key from Prowlarr" Type="Variable" Display="always" Required="true" Mask="true"/>
+
+  <Config Name="Prowlarr Categories" Target="PROWLARR_CATEGORIES" Default="7000" Mode="" Description="Newznab categories searched" Type="Variable" Display="advanced" Required="true" Mask="false">7000</Config>
+
+  <Config Name="Manga Categories" Target="MANGA_CATEGORIES" Default="7030" Mode="" Description="Categories identifying manga releases" Type="Variable" Display="advanced" Required="true" Mask="false">7030</Config>
+
+  <Config Name="Comics Categories" Target="COMICS_CATEGORIES" Default="7030" Mode="" Description="Categories identifying comics releases" Type="Variable" Display="advanced" Required="true" Mask="false">7030</Config>
+
+  <Config Name="Pack Images" Target="PACK_IMAGES" Default="true" Mode="" Description="Pack loose images into CBZ files" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+
+  <Config Name="Follow Interval Hours" Target="FOLLOW_INTERVAL_HOURS" Default="12" Mode="" Description="Hours between checks for followed series" Type="Variable" Display="advanced" Required="false" Mask="false">12</Config>
+
+  <Config Name="Release Language" Target="RELEASE_LANG" Default="fr" Mode="" Description="Default release language: fr, en, ja, es, it or de" Type="Variable" Display="advanced" Required="false" Mask="false">fr</Config>
+
+  <Config Name="qBittorrent URL" Target="QBIT_URL" Default="" Mode="" Description="Reachable qBittorrent Web UI URL" Type="Variable" Display="always" Required="true" Mask="false"/>
+
+  <Config Name="qBittorrent Username" Target="QBIT_USER" Default="admin" Mode="" Description="qBittorrent Web UI username" Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
+
+  <Config Name="qBittorrent Password" Target="QBIT_PASSWORD" Default="" Mode="" Description="qBittorrent Web UI password" Type="Variable" Display="always" Required="true" Mask="true"/>
+
+  <Config Name="qBittorrent Manga Save Root" Target="MANGA_SAVE_ROOT" Default="/data/manga" Mode="" Description="Manga save path as seen inside qBittorrent; map it to the same host folder as Lire" Type="Variable" Display="always" Required="true" Mask="false">/data/manga</Config>
+
+  <Config Name="qBittorrent Comics Save Root" Target="COMICS_SAVE_ROOT" Default="/data/comics" Mode="" Description="Comics save path as seen inside qBittorrent; map it to the same host folder as Lire" Type="Variable" Display="always" Required="true" Mask="false">/data/comics</Config>
+
+  <Config Name="Kavita URL" Target="KAVITA_URL" Default="" Mode="" Description="Reachable Kavita URL, including its port" Type="Variable" Display="always" Required="true" Mask="false"/>
+
+  <Config Name="Kavita API Key" Target="KAVITA_API_KEY" Default="" Mode="" Description="API key from Kavita third-party clients settings" Type="Variable" Display="always" Required="true" Mask="true"/>
+
+  <Config Name="Kavita Public URL" Target="KAVITA_PUBLIC_URL" Default="" Mode="" Description="Public address readers use to access Kavita" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="Kavita Manga Library Name" Target="KAVITA_LIBRARY" Default="Mangas" Mode="" Description="Existing Kavita manga library name" Type="Variable" Display="always" Required="true" Mask="false">Mangas</Config>
+
+  <Config Name="Kavita Manga Root" Target="KAVITA_MANGA_ROOT" Default="/manga" Mode="" Description="Manga path as seen inside Kavita; must point to the same host folder as Lire" Type="Variable" Display="always" Required="true" Mask="false">/manga</Config>
+
+  <Config Name="Kavita Comics Library Name" Target="KAVITA_COMICS_LIBRARY" Default="Comics &amp; BD" Mode="" Description="Existing Kavita comics library name" Type="Variable" Display="always" Required="true" Mask="false">Comics &amp; BD</Config>
+
+  <Config Name="Kavita Comics Root" Target="KAVITA_COMICS_ROOT" Default="/comics" Mode="" Description="Comics path as seen inside Kavita; must point to the same host folder as Lire" Type="Variable" Display="always" Required="true" Mask="false">/comics</Config>
+  <Config Name="Public URL" Target="PUBLIC_URL" Default="" Mode="" Description="Public address of Lire, used for reverse proxy detection" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Trusted Proxies" Target="TRUSTED_PROXIES" Default="127.0.0.0/8,172.16.0.0/12" Mode="" Description="Trusted reverse proxy IP ranges for client IP forwarding" Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.0/8,172.16.0.0/12</Config>
+  <Config Name="OIDC Issuer" Target="OIDC_ISSUER" Default="" Mode="" Description="Optional OpenID Connect issuer URL" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="OIDC Client ID" Target="OIDC_CLIENT_ID" Default="" Mode="" Description="Optional OpenID Connect client ID" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="OIDC Client Secret" Target="OIDC_CLIENT_SECRET" Default="" Mode="" Description="Optional OpenID Connect client secret" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="OIDC Sign-in Label" Target="OIDC_NAME" Default="SSO" Mode="" Description="Label for the optional single sign-on button" Type="Variable" Display="advanced" Required="false" Mask="false">SSO</Config>
+  <Config Name="Pocket ID API Key" Target="POCKET_ID_API_KEY" Default="" Mode="" Description="Optional Pocket ID API key" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="Indexer Languages" Target="INDEXER_LANGS" Default="" Mode="" Description="Optional language mapping by Prowlarr indexer ID" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Category Languages" Target="CATEGORY_LANGS" Default="" Mode="" Description="Optional language mapping by category ID" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Ollama URL" Target="OLLAMA_URL" Default="" Mode="" Description="Optional Ollama server URL for synopsis translation" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Ollama Model" Target="OLLAMA_MODEL" Default="mistral:7b" Mode="" Description="Optional Ollama model for synopsis translation" Type="Variable" Display="advanced" Required="false" Mask="false">mistral:7b</Config>
+
+</Container>
